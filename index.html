@@ -174,7 +174,7 @@
           <div id="save-status-container" class="flex items-center gap-1 sm:gap-2 h-4 text-[9px] sm:text-[10px] uppercase font-bold tracking-wide opacity-0 transition-opacity">
             <span id="text-cloud-saving" class="text-yellow-500 hidden flex items-center">Salvando<span class="animate-pulse">...</span></span>
             <span id="text-cloud-saved" class="text-green-500 hidden flex items-center">Salvo ✓</span>
-            <span id="text-cloud-error" class="text-red-500 hidden">Erro ✗</span>
+            <span id="text-cloud-error" class="text-red-500 hidden cursor-help" title="Erro desconhecido">Erro ✗</span>
           </div>
           <div class="flex items-center gap-2 sm:gap-3 mt-1 flex-wrap justify-end">
             <span id="label-nome-aluno" class="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded border text-accent border-accent bg-transparent transition-colors max-w-[120px] sm:max-w-none truncate">
@@ -383,7 +383,7 @@
       { nome: "LUIZ P. R. C.", dataNascimento: "29/04/2008" }, { nome: "MANUELA F. D. S.", dataNascimento: "05/10/2010" },
       { nome: "MARCELLY L. M.", dataNascimento: "30/12/2009" }, { nome: "MARIA C. F. B.", dataNascimento: "10/03/2011" },
       { nome: "MARIA C. H. R.", dataNascimento: "03/03/2011" }, { nome: "MARIA F. X. P.", dataNascimento: "04/09/2009" },
-      { nome: "MARIA V. S. D. S. C.", dataNascimento: "31/12/2010" }, { nome: "MARIANA A. D. S.", dataNascimento: "30/03/2011" },
+      { nome: "MARIA V. S. D. S. C.", dataNascimento: "31/12/2010" }, { nome: "MARIANA A. D. S.", dataNascimento: "30/03/2011" }, , { nome: "MATEUS B. F.", dataNascimento: "05/10/2010" },
       { nome: "MAYARA P. G.", dataNascimento: "17/12/2010" }, { nome: "MAYRA M. A.", dataNascimento: "27/06/2010" },
       { nome: "MAYRON V. V. N. R.", dataNascimento: "18/10/2010" }, { nome: "NATHALIA E. C.", dataNascimento: "23/04/2010" },
       { nome: "PEDRO H. D. S. C.", dataNascimento: "07/01/2011" }, { nome: "PEDRO L. L. D. S.", dataNascimento: "06/03/2011" },
@@ -896,6 +896,7 @@ ORDER BY titulo ASC;`;
           setSaveStatus('saved');
         } catch (error) {
           console.error("Erro no auto-save:", error);
+          DOM.textError.title = error.message; // Mostra a mensagem real ao passar o rato
           setSaveStatus('error');
         }
       }, 1500);
