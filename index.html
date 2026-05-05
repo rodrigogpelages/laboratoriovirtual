@@ -17,9 +17,16 @@
   <!-- SQL.js WebAssembly Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
 
+  <!-- CodeMirror: Sintaxe Colorida e Linhas -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
+
   <style>
     /* Variáveis de Cor de Destaque */
-    :root { --c-main: #4f46e5; --c-hover: #4338ca; } /* Indigo (Padrão) */
+    :root { --c-main: #4f46e5; --c-hover: #4338ca; } 
     body.theme-blue { --c-main: #2563eb; --c-hover: #1d4ed8; }
     body.theme-green { --c-main: #16a34a; --c-hover: #15803d; }
     body.theme-orange { --c-main: #ea580c; --c-hover: #c2410c; }
@@ -29,6 +36,7 @@
     .btn-accent:hover { background-color: var(--c-hover); }
     .text-accent { color: var(--c-main); }
     .border-accent { border-color: var(--c-main); }
+    .bg-accent-light { background-color: var(--c-main); opacity: 0.1; }
 
     /* Estilização suave das barras de rolagem */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -36,39 +44,31 @@
     ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
-    /* Layout sincronizado para Numeração de Linhas e Textarea */
+    /* Customização do CodeMirror para preencher o espaço */
     .editor-wrapper {
-      display: flex;
       flex: 1;
-      overflow: hidden;
       position: relative;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      line-height: 1.5; /* Altura de linha fixa para sincronia perfeita */
-    }
-    
-    #line-numbers {
-      padding: 1rem 0.5rem;
-      text-align: right;
-      user-select: none;
-      overflow: hidden;
-      min-width: 3rem;
-      flex-shrink: 0;
       font-size: inherit;
     }
-    
-    #editor {
-      flex: 1;
-      padding: 1rem 0.5rem;
-      white-space: pre;
-      overflow-wrap: normal;
-      overflow-x: auto;
-      font-size: inherit;
-      border: none;
-      outline: none;
+    .CodeMirror {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      height: 100% !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+      font-size: inherit !important;
+      background: transparent !important;
     }
+    /* Esconder bordas nativas do CodeMirror */
+    .CodeMirror-gutters {
+      border-right: 1px solid rgba(150, 150, 150, 0.2) !important;
+      background-color: transparent !important;
+    }
+    /* Estilo Aba Ativa */
+    .tab-active { border-bottom: 2px solid var(--c-main); color: var(--c-main); font-weight: bold; }
+    .tab-inactive { color: #6b7280; }
+    .dark .tab-inactive { color: #9ca3af; }
   </style>
 </head>
-<!-- h-[100dvh] ajusta perfeitamente na barra do safari/chrome mobile -->
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-200 font-sans h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300 theme-blue">
 
   <!-- ========================================== -->
@@ -76,7 +76,6 @@
   <!-- ========================================== -->
   <div id="login-screen" class="flex flex-col items-center justify-center h-full w-full p-4 absolute inset-0 z-50 bg-gray-50 dark:bg-gray-950 transition-colors duration-300 overflow-y-auto">
     
-    <!-- Botão de Tema (Login) -->
     <button id="theme-toggle-login" class="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-full text-gray-500 hover:bg-gray-200 text-accent dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
       <svg id="icon-sun-login" class="w-6 h-6 hidden dark:block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>
       <svg id="icon-moon-login" class="w-6 h-6 block dark:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>
@@ -135,9 +134,7 @@
           <p class="text-[10px] sm:text-xs text-gray-500">Prof. Rodrigo G. Pelages</p>
         </div>
         
-        <div id="badge-turma" class="px-2 py-1 text-[10px] sm:text-xs font-bold rounded-md shadow btn-accent whitespace-nowrap">
-          <!-- Turma dinâmica -->
-        </div>
+        <div id="badge-turma" class="px-2 py-1 text-[10px] sm:text-xs font-bold rounded-md shadow btn-accent whitespace-nowrap"></div>
 
         <div class="hidden lg:flex items-center text-xs font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700">
           <svg class="w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
@@ -153,23 +150,18 @@
           <button id="btn-tips" title="Dicas e Atalhos" class="p-1.5 sm:p-2 rounded-full text-gray-500 hover:bg-gray-100 text-accent dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.829 1.508-2.316a7.5 7.5 0 1 0-7.516 0c.85.487 1.508 1.333 1.508 2.316V18" /></svg>
           </button>
-
           <button id="btn-history" title="Ver Histórico" class="p-1.5 sm:p-2 rounded-full text-gray-500 hover:bg-gray-100 text-accent dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
           </button>
-          
           <button id="btn-settings" title="Personalizar" class="p-1.5 sm:p-2 rounded-full text-gray-500 hover:bg-gray-100 text-accent dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
           </button>
-
-          <!-- Botão de Tema -->
           <button id="theme-toggle-app" class="p-1.5 sm:p-2 rounded-full text-gray-500 hover:bg-gray-100 text-accent dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
             <svg id="icon-sun-app" class="w-5 h-5 sm:w-6 sm:h-6 hidden dark:block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>
             <svg id="icon-moon-app" class="w-5 h-5 sm:w-6 sm:h-6 block dark:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>
           </button>
         </div>
 
-        <!-- Área de Salvamento e Login -->
         <div class="flex flex-col items-end border-l border-gray-200 dark:border-gray-700 pl-2 sm:pl-3">
           <div id="save-status-container" class="flex items-center gap-1 sm:gap-2 h-4 text-[9px] sm:text-[10px] uppercase font-bold tracking-wide opacity-0 transition-opacity">
             <span id="text-cloud-saving" class="text-yellow-500 hidden flex items-center">Salvando<span class="animate-pulse">...</span></span>
@@ -190,7 +182,6 @@
           </div>
         </div>
 
-        <!-- Botão Executar -->
         <button id="btn-executar" class="w-full md:w-auto flex justify-center items-center px-5 py-2.5 mt-2 md:mt-0 rounded-lg font-bold shadow-lg transform transition active:scale-95 btn-accent">
           <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653Z" /></svg>
           Executar
@@ -198,50 +189,56 @@
       </div>
     </header>
 
-    <!-- MAIN EDITOR AREA (Rola em telas menores, lado a lado em telas maiores) -->
+    <!-- MAIN EDITOR AREA -->
     <main class="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
       
-      <!-- Lado Esquerdo: Editor -->
+      <!-- Lado Esquerdo: Editor Profissional -->
       <section class="w-full md:w-1/2 flex-none min-h-[350px] md:min-h-0 md:flex-auto md:h-full flex flex-col border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 transition-colors">
         <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-gray-100 dark:bg-gray-800 dark:border-gray-700 shrink-0 transition-colors">
-          <span id="label-filename" class="text-xs font-mono font-bold text-accent">
-            script.js
-          </span>
+          <span id="label-filename" class="text-xs font-mono font-bold text-accent">script.js</span>
           <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded text-gray-500 bg-gray-200 dark:bg-gray-700 dark:text-gray-400 transition-colors">
-            Editor
+            Editor Profissional
           </span>
         </div>
         
-        <div id="editor-wrapper" class="editor-wrapper bg-white dark:bg-[#1e1e1e] transition-colors">
-          <div id="line-numbers" class="text-gray-400 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-colors"></div>
-          <textarea id="editor" spellcheck="false" placeholder="Escreva seu código aqui..." class="bg-transparent text-gray-800 dark:text-[#d4d4d4] transition-colors"></textarea>
+        <div id="editor-wrapper" class="editor-wrapper bg-white dark:bg-[#282a36] transition-colors">
+          <textarea id="editor" spellcheck="false" placeholder="Escreva seu código aqui..."></textarea>
         </div>
       </section>
 
-      <!-- Lado Direito: Terminal -->
+      <!-- Lado Direito: Terminal & Feedback -->
       <section class="w-full md:w-1/2 flex-none min-h-[300px] md:min-h-0 md:flex-auto md:h-full flex flex-col bg-gray-50 dark:bg-[#0d0d0d] transition-colors">
-        <div class="flex flex-wrap items-center justify-between px-4 py-2 border-b border-gray-200 bg-gray-100 dark:bg-gray-800 dark:border-gray-700 shrink-0 transition-colors gap-2">
-           <span class="text-[10px] uppercase font-bold tracking-widest text-gray-500 dark:text-gray-400">
-             Terminal / Saída
-           </span>
-           <div class="flex items-center gap-2 flex-wrap">
-             <!-- Botão de Tradução de Erros (Inicia oculto) -->
-             <button id="btn-translate-error" class="hidden flex items-center text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1.5 rounded bg-orange-600 hover:bg-orange-500 text-white shadow-sm transition-colors">
+        
+        <!-- Abas do Lado Direito -->
+        <div class="flex items-center justify-between px-4 pt-2 border-b border-gray-200 bg-gray-100 dark:bg-gray-800 dark:border-gray-700 shrink-0 transition-colors">
+           <div class="flex space-x-4">
+             <button id="tab-btn-terminal" class="tab-active pb-2 text-xs uppercase tracking-widest transition-colors focus:outline-none">Terminal / Saída</button>
+             <button id="tab-btn-feedback" class="tab-inactive pb-2 text-xs uppercase tracking-widest transition-colors focus:outline-none flex items-center">
+               Feedback do Prof.
+               <span class="ml-1 flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-light opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--c-main)]"></span></span>
+             </button>
+           </div>
+           <div class="flex items-center gap-2 pb-2">
+             <button id="btn-translate-error" class="hidden flex items-center text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 rounded bg-orange-600 hover:bg-orange-500 text-white shadow-sm transition-colors">
                <svg class="w-3.5 h-3.5 mr-1 sm:mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" /></svg>
                <span id="label-translate-error">Traduzir Erro</span>
              </button>
-
-             <a href="https://rodrigogpelages.github.io/aulasinformatica/" target="_blank" rel="noopener noreferrer" title="Enviar atividade" class="flex items-center text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1.5 rounded bg-green-600 hover:bg-green-500 text-white shadow-sm transition-colors">
-               <svg class="w-3.5 h-3.5 mr-1 sm:mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-               </svg>
+             <a href="https://rodrigogpelages.github.io/aulasinformatica/" target="_blank" rel="noopener noreferrer" title="Enviar atividade" class="flex items-center text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white shadow-sm transition-colors">
+               <svg class="w-3.5 h-3.5 mr-1 sm:mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
                Enviar Código
              </a>
            </div>
         </div>
         
-        <div class="flex-1 p-4 overflow-y-auto">
+        <!-- Conteúdo do Terminal -->
+        <div id="panel-terminal" class="flex-1 p-4 overflow-y-auto block">
           <pre id="output" class="font-mono text-sm whitespace-pre-wrap text-accent dark:text-gray-300 transition-colors">A saída aparecerá aqui.</pre>
+        </div>
+
+        <!-- Conteúdo do Feedback -->
+        <div id="panel-feedback" class="flex-1 flex flex-col p-4 hidden bg-yellow-50 dark:bg-yellow-900/10 transition-colors">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Área reservada para anotações ou para colar o feedback recebido pelo Professor Rodrigo.</p>
+          <textarea id="feedback-editor" placeholder="Cole ou digite o feedback aqui..." class="flex-1 w-full p-3 text-sm rounded-lg border border-yellow-200 dark:border-yellow-700/50 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 border-accent resize-none transition-colors"></textarea>
         </div>
       </section>
 
@@ -255,7 +252,6 @@
           Dicas e Atalhos Úteis
         </h2>
         <div class="space-y-4 text-sm text-gray-600 dark:text-gray-300">
-          <p>Utilize os atalhos abaixo no seu teclado para programar mais rápido:</p>
           <ul class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <li class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><kbd class="font-bold text-accent">Ctrl + C</kbd> : Copiar texto selecionado</li>
             <li class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><kbd class="font-bold text-accent">Ctrl + X</kbd> : Recortar (Remove e copia)</li>
@@ -264,8 +260,8 @@
             <li class="bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><kbd class="font-bold text-accent">Ctrl + A</kbd> : Selecionar TODO o código</li>
           </ul>
           <p class="mt-4 border-t pt-3 dark:border-gray-700 leading-relaxed">
-            💡 <strong>Atenção:</strong> A função de colar (<kbd>Ctrl+V</kbd>) está <span class="font-bold text-red-500">desativada</span> no sistema para garantir que você pratique a digitação do código! Copiar (<kbd>Ctrl+C</kbd>) está liberado para o envio das atividades.<br><br>
-            ⚠️ Se o seu código tiver algum erro em inglês ao executar, clique no botão amarelo <strong>"Traduzir Erro"</strong> que aparecerá no Terminal!
+            💡 <strong>Atenção:</strong> A função de colar (<kbd>Ctrl+V</kbd>) está <span class="font-bold text-red-500">desativada</span> no Editor para garantir que você pratique a digitação do código!<br><br>
+            ⚠️ Se o seu código tiver algum erro, o <strong>Compilador Profissional</strong> vai indicar exatamente a <span class="font-bold text-red-500">Linha</span> do problema no terminal. E se a mensagem for em inglês, use o botão <strong>"Traduzir Erro"</strong>!
           </p>
         </div>
         <div class="mt-6 flex justify-end">
@@ -293,7 +289,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1.5 text-gray-600 dark:text-gray-400">Tamanho da Fonte (Editor e Saída)</label>
+            <label class="block text-sm font-medium mb-1.5 text-gray-600 dark:text-gray-400">Tamanho da Fonte</label>
             <select id="select-font-size" class="w-full rounded-lg px-3 py-2 border border-gray-300 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 border-accent dark:bg-gray-800 dark:border-gray-700 dark:text-white transition-colors">
               <option value="12px">Pequena (12px)</option>
               <option value="14px">Padrão (14px)</option>
@@ -316,12 +312,8 @@
           <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
           Histórico de Salvamentos
         </h2>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 shrink-0">Seu código é salvo automaticamente. Clique no botão "Salvar" no topo para fixar uma versão aqui. Clique em "Restaurar" para voltar.</p>
-        
-        <div id="history-list" class="flex-1 overflow-y-auto space-y-3 pr-2">
-          <!-- Itens preenchidos via JS -->
-        </div>
-
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 shrink-0">Seu código é salvo automaticamente. Clique no botão "Salvar" no topo para fixar uma versão aqui.</p>
+        <div id="history-list" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
         <div class="mt-6 flex justify-end shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
           <button id="btn-close-history" class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg font-bold transition-colors">Fechar</button>
         </div>
@@ -336,19 +328,12 @@
   <script type="module">
     // =========================================================================================
     // 🔒 INÍCIO DO CÓDIGO PARA OFUSCADOR
-    // Todas as informações principais, senhas (datas), dados do Firebase e lógicas estão aqui.
-    // Você pode copiar TUDO o que está abaixo (até o fim desta tag), jogar no seu 
-    // ofuscador de preferência e colar o resultado gerado de volta neste exato local.
     // =========================================================================================
 
-    // Módulos do Firebase via CDN Web
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // ----------------------------------------------------
-    // Configurações do seu Banco de Dados Firebase
-    // ----------------------------------------------------
     const myFirebaseConfig = {
       apiKey: "AIzaSyAKUxePjBJYsPTTVQaA8h32LdL3BwRwTpk",
       authDomain: "plataforma-ipi-eab52.firebaseapp.com",
@@ -359,17 +344,14 @@
       measurementId: "G-9NC50ZMWH9"
     };
 
-    const firebaseConfig = typeof __firebase_config !== 'undefined' 
-      ? JSON.parse(__firebase_config) 
-      : (myFirebaseConfig.apiKey ? myFirebaseConfig : null);
-
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : (myFirebaseConfig.apiKey ? myFirebaseConfig : null);
     const app = firebaseConfig ? initializeApp(firebaseConfig) : null;
     const auth = app ? getAuth(app) : null;
     const db = app ? getFirestore(app) : null;
     const appId = typeof __app_id !== 'undefined' ? __app_id : (myFirebaseConfig.projectId || 'plataforma-ipi-padrao');
 
     // ----------------------------------------------------
-    // Bases de Dados dos Alunos (Com Data de Nascimento para Login)
+    // Bases de Dados dos Alunos
     // ----------------------------------------------------
     const alunos1IPI = [
       { nome: "ALLICIA P. F. F.", dataNascimento: "15/02/2011" }, { nome: "BEATRIZ M. S.", dataNascimento: "21/12/2009" },
@@ -461,15 +443,12 @@ FROM jogos
 WHERE ano_lancamento > 2015 
 ORDER BY titulo ASC;`;
 
-    // ----------------------------------------------------
-    // Frases Motivacionais de TI
-    // ----------------------------------------------------
     const motivationalQuotes = [
       "A máquina não pensa, mas faz você pensar. 💡",
       "Não é um erro, é uma funcionalidade não documentada! 🐛",
       "O único código perfeito é aquele que não foi escrito. ⌨️",
       "Programar é como pensar de forma estruturada. 🧠",
-      "Na dúvida, imprima a variável no console (console.log). 🔍",
+      "Na dúvida, imprima a variável no console. 🔍",
       "Todo especialista um dia foi um iniciante curioso. 🚀",
       "O computador faz o que você manda, não o que você quer. 🖥️",
       "A melhor forma de prever o futuro é inventá-lo. 🌐"
@@ -484,70 +463,51 @@ ORDER BY titulo ASC;`;
     let isSQLReady = false;
     let autoSaveTimer = null;
     let currentCode = { js: defaultJs, sql: defaultSql };
+    let currentFeedback = "";
     let currentSettings = { fontSize: '14px', theme: 'dark', color: 'blue' };
     let codeHistory = [];
-    
-    // Variável para gerenciar a tradução do erro
-    let currentErrorData = null; // Guarda o texto raw e o traduzido
+    let currentErrorData = null; 
+    let cmEditor = null; // Instância do CodeMirror
 
     const gerarIdAluno = (nome) => nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
 
     // Elementos DOM
     const DOM = {
-      html: document.documentElement,
-      body: document.body,
-      loginScreen: document.getElementById('login-screen'),
-      appScreen: document.getElementById('app-screen'),
-      selTurma: document.getElementById('select-turma'),
-      selNome: document.getElementById('select-nome'),
-      divSenha: document.getElementById('div-senha'),
-      inputSenha: document.getElementById('input-senha'),
-      errorSenha: document.getElementById('error-senha'),
-      btnEntrar: document.getElementById('btn-entrar'),
-      btnSair: document.getElementById('btn-sair'),
-      btnManualSave: document.getElementById('btn-manual-save'),
-      btnSettings: document.getElementById('btn-settings'),
-      btnHistory: document.getElementById('btn-history'),
-      btnTips: document.getElementById('btn-tips'),
-      themeToggleLogin: document.getElementById('theme-toggle-login'),
-      themeToggleApp: document.getElementById('theme-toggle-app'),
-      badgeTurma: document.getElementById('badge-turma'),
-      labelNomeAluno: document.getElementById('label-nome-aluno'),
-      labelFilename: document.getElementById('label-filename'),
+      html: document.documentElement, body: document.body,
+      loginScreen: document.getElementById('login-screen'), appScreen: document.getElementById('app-screen'),
+      selTurma: document.getElementById('select-turma'), selNome: document.getElementById('select-nome'),
+      divSenha: document.getElementById('div-senha'), inputSenha: document.getElementById('input-senha'),
+      errorSenha: document.getElementById('error-senha'), btnEntrar: document.getElementById('btn-entrar'),
+      btnSair: document.getElementById('btn-sair'), btnManualSave: document.getElementById('btn-manual-save'),
+      btnSettings: document.getElementById('btn-settings'), btnHistory: document.getElementById('btn-history'),
+      btnTips: document.getElementById('btn-tips'), themeToggleLogin: document.getElementById('theme-toggle-login'),
+      themeToggleApp: document.getElementById('theme-toggle-app'), badgeTurma: document.getElementById('badge-turma'),
+      labelNomeAluno: document.getElementById('label-nome-aluno'), labelFilename: document.getElementById('label-filename'),
       
-      editorWrapper: document.getElementById('editor-wrapper'),
-      editor: document.getElementById('editor'),
-      lineNumbers: document.getElementById('line-numbers'),
+      editorWrapper: document.getElementById('editor-wrapper'), editor: document.getElementById('editor'),
       
-      output: document.getElementById('output'),
-      btnExecutar: document.getElementById('btn-executar'),
-      btnTranslateError: document.getElementById('btn-translate-error'),
-      labelTranslateError: document.getElementById('label-translate-error'),
-      quoteDisplay: document.getElementById('motivational-quote'),
-      clockDisplay: document.getElementById('system-clock'),
-      
-      saveContainer: document.getElementById('save-status-container'),
-      iconSaving: document.getElementById('icon-cloud-saving'),
-      textSaving: document.getElementById('text-cloud-saving'),
-      iconSaved: document.getElementById('icon-cloud-saved'),
-      textSaved: document.getElementById('text-cloud-saved'),
-      textError: document.getElementById('text-cloud-error'),
+      tabTerminal: document.getElementById('tab-btn-terminal'), tabFeedback: document.getElementById('tab-btn-feedback'),
+      panelTerminal: document.getElementById('panel-terminal'), panelFeedback: document.getElementById('panel-feedback'),
+      feedbackEditor: document.getElementById('feedback-editor'),
 
-      modalSettings: document.getElementById('modal-settings'),
-      selectFontSize: document.getElementById('select-font-size'),
-      selectColor: document.getElementById('select-theme-color'),
-      btnCloseSettings: document.getElementById('btn-close-settings'),
+      output: document.getElementById('output'), btnExecutar: document.getElementById('btn-executar'),
+      btnTranslateError: document.getElementById('btn-translate-error'), labelTranslateError: document.getElementById('label-translate-error'),
+      quoteDisplay: document.getElementById('motivational-quote'), clockDisplay: document.getElementById('system-clock'),
       
-      modalHistory: document.getElementById('modal-history'),
-      historyList: document.getElementById('history-list'),
-      btnCloseHistory: document.getElementById('btn-close-history'),
+      saveContainer: document.getElementById('save-status-container'), iconSaving: document.getElementById('icon-cloud-saving'),
+      textSaving: document.getElementById('text-cloud-saving'), iconSaved: document.getElementById('icon-cloud-saved'),
+      textSaved: document.getElementById('text-cloud-saved'), textError: document.getElementById('text-cloud-error'),
 
-      modalTips: document.getElementById('modal-tips'),
+      modalSettings: document.getElementById('modal-settings'), selectFontSize: document.getElementById('select-font-size'),
+      selectColor: document.getElementById('select-theme-color'), btnCloseSettings: document.getElementById('btn-close-settings'),
+      
+      modalHistory: document.getElementById('modal-history'), historyList: document.getElementById('history-list'),
+      btnCloseHistory: document.getElementById('btn-close-history'), modalTips: document.getElementById('modal-tips'),
       btnCloseTips: document.getElementById('btn-close-tips')
     };
 
     // ----------------------------------------------------
-    // Interface Inicial: Frase, Relógio e Selects
+    // Interface Inicial e Login
     // ----------------------------------------------------
     DOM.quoteDisplay.innerText = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 
@@ -562,24 +522,18 @@ ORDER BY titulo ASC;`;
       DOM.selNome.innerHTML = '<option value="" disabled selected>Selecione seu nome da lista...</option>';
       turmas[turma].forEach(aluno => {
         const opt = document.createElement('option');
-        opt.value = aluno.nome;
-        opt.textContent = aluno.nome;
+        opt.value = aluno.nome; opt.textContent = aluno.nome;
         DOM.selNome.appendChild(opt);
       });
       DOM.inputSenha.value = '';
-      DOM.divSenha.classList.add('hidden');
-      DOM.errorSenha.classList.add('hidden');
-      
+      DOM.divSenha.classList.add('hidden'); DOM.errorSenha.classList.add('hidden');
       checkLoginReady();
     }
 
     function checkLoginReady() {
       const nomeSelecionado = DOM.selNome.value;
       const senhaVal = DOM.inputSenha.value;
-      
-      // Validação visual simples: se tem 10 chars (DD/MM/AAAA) e selecionou nome
       DOM.btnEntrar.disabled = !(nomeSelecionado && senhaVal.length === 10);
-      
       if (!DOM.btnEntrar.disabled) {
         DOM.btnEntrar.classList.remove('bg-gray-300', 'text-gray-500', 'dark:bg-gray-700');
         DOM.btnEntrar.classList.add('text-white', 'btn-accent');
@@ -590,60 +544,49 @@ ORDER BY titulo ASC;`;
       }
     }
 
-    // Máscara da Data de Nascimento (Senha)
     DOM.inputSenha.addEventListener('input', (e) => {
       let v = e.target.value.replace(/\D/g, '');
       if (v.length > 8) v = v.substring(0, 8);
-      if (v.length >= 5) {
-        v = v.substring(0, 2) + '/' + v.substring(2, 4) + '/' + v.substring(4, 8);
-      } else if (v.length >= 3) {
-        v = v.substring(0, 2) + '/' + v.substring(2, 4);
-      }
+      if (v.length >= 5) v = v.substring(0, 2) + '/' + v.substring(2, 4) + '/' + v.substring(4, 8);
+      else if (v.length >= 3) v = v.substring(0, 2) + '/' + v.substring(2, 4);
       e.target.value = v;
-      DOM.errorSenha.classList.add('hidden'); // Oculta erro anterior ao digitar
+      DOM.errorSenha.classList.add('hidden'); 
       checkLoginReady();
     });
 
     DOM.selTurma.addEventListener('change', populateNomes);
     DOM.selNome.addEventListener('change', () => {
-      if (DOM.selNome.value) {
-        DOM.divSenha.classList.remove('hidden');
-        DOM.inputSenha.focus();
-      }
+      if (DOM.selNome.value) { DOM.divSenha.classList.remove('hidden'); DOM.inputSenha.focus(); }
       checkLoginReady();
     });
-    
     populateNomes();
 
     // ----------------------------------------------------
-    // Numeração de Linhas no Editor (Sincronizado)
+    // Controle das Abas da Direita (Terminal vs Feedback)
     // ----------------------------------------------------
-    function updateLineNumbers() {
-      const lines = DOM.editor.value.split('\n').length;
-      let numbersHtml = '';
-      for (let i = 1; i <= lines; i++) {
-        numbersHtml += `<div>${i}</div>`;
+    function setTab(tabName) {
+      if(tabName === 'terminal') {
+        DOM.tabTerminal.classList.replace('tab-inactive', 'tab-active');
+        DOM.tabFeedback.classList.replace('tab-active', 'tab-inactive');
+        DOM.panelTerminal.classList.remove('hidden');
+        DOM.panelFeedback.classList.add('hidden');
+      } else {
+        DOM.tabFeedback.classList.replace('tab-inactive', 'tab-active');
+        DOM.tabTerminal.classList.replace('tab-active', 'tab-inactive');
+        DOM.panelFeedback.classList.remove('hidden');
+        DOM.panelTerminal.classList.add('hidden');
       }
-      DOM.lineNumbers.innerHTML = numbersHtml;
     }
-    
-    // Sincronizar rolagem perfeitamente
-    DOM.editor.addEventListener('scroll', () => {
-      DOM.lineNumbers.scrollTop = DOM.editor.scrollTop;
-    });
-
-    // Desativa a função Colar no Editor
-    DOM.editor.addEventListener('paste', (e) => {
-      e.preventDefault();
-      window.alert("⚠️ Ação bloqueada: A função de COLAR código foi desativada pelo Prof. Rodrigo. Pratique a digitação do código!");
-    });
+    DOM.tabTerminal.addEventListener('click', () => setTab('terminal'));
+    DOM.tabFeedback.addEventListener('click', () => setTab('feedback'));
 
     // ----------------------------------------------------
-    // Tradutor de Erros (Inglês -> Português)
+    // Tradutor de Erros Profissional (Inglês -> Português)
     // ----------------------------------------------------
     function translateErrorMsg(msg) {
       let m = String(msg);
-      // Erros JavaScript
+      m = m.replace(/Invalid left-hand side in assignment/g, "Atribuição inválida (Você usou '=' em vez de '+' para juntar um texto? Ex: var = \"kg\" dentro de um alert)");
+      m = m.replace(/Unexpected token '(.*)'/g, "Símbolo inesperado '$1' (Verifique pontos, vírgulas, ou espaços errados como '> =')");
       m = m.replace(/is not defined/g, "não foi definido (verifique se você digitou o nome certo)");
       m = m.replace(/Unexpected token/g, "Símbolo inesperado (verifique pontos, vírgulas ou chaves)");
       m = m.replace(/Unexpected identifier/g, "Palavra inesperada (esqueceu uma vírgula ou aspas?)");
@@ -651,19 +594,16 @@ ORDER BY titulo ASC;`;
       m = m.replace(/after argument list/g, "após a lista de parênteses");
       m = m.replace(/Unexpected end of input/g, "Fim de código inesperado (você esqueceu de fechar aspas, parênteses ou chaves?)");
       m = m.replace(/Assignment to constant variable/g, "Tentativa de mudar o valor de uma constante (Use 'let' em vez de 'const')");
-      // Erros SQL
       m = m.replace(/syntax error/g, "Erro de sintaxe (verifique a estrutura do comando)");
       m = m.replace(/near "(.*)"/g, "próximo à palavra '$1'");
       m = m.replace(/no such table/g, "Tabela não encontrada");
       m = m.replace(/no such column/g, "Coluna não encontrada na tabela");
-      m = m.replace(/incomplete input/g, "Comando incompleto (você esqueceu de alguma palavra?)");
+      m = m.replace(/incomplete input/g, "Comando incompleto (você esqueceu de fechar algo?)");
       return m;
     }
 
-    // Ação do Botão Traduzir Erro
     DOM.btnTranslateError.addEventListener('click', () => {
       if (!currentErrorData) return;
-      
       if (currentErrorData.isTranslated) {
         DOM.output.innerText = currentErrorData.raw;
         currentErrorData.isTranslated = false;
@@ -676,25 +616,25 @@ ORDER BY titulo ASC;`;
     });
 
     // ----------------------------------------------------
-    // Lógica do Tema, Cores e Configurações
+    // Lógica do Tema, Cores e Configurações (com CodeMirror)
     // ----------------------------------------------------
     function applySettings() {
-      // Aplicar Tema Claro/Escuro
       if (currentSettings.theme === 'dark') DOM.html.classList.add('dark');
       else DOM.html.classList.remove('dark');
 
-      // Aplicar Tamanho da Fonte no contêiner pai para herança perfeita
       DOM.editorWrapper.style.fontSize = currentSettings.fontSize;
       DOM.output.style.fontSize = currentSettings.fontSize;
+      DOM.feedbackEditor.style.fontSize = currentSettings.fontSize;
       DOM.selectFontSize.value = currentSettings.fontSize;
 
-      // Aplicar Cor de Destaque
       DOM.body.className = DOM.body.className.replace(/\btheme-[a-z]+\b/g, ''); 
       DOM.body.classList.add(`theme-${currentSettings.color}`);
       DOM.selectColor.value = currentSettings.color;
-      
-      // Atualizar a barra de linhas caso mude a fonte
-      updateLineNumbers();
+
+      if(cmEditor) {
+        cmEditor.setOption("theme", currentSettings.theme === 'dark' ? 'dracula' : 'default');
+        cmEditor.refresh();
+      }
     }
 
     function toggleTheme() {
@@ -726,21 +666,13 @@ ORDER BY titulo ASC;`;
         DOM.historyList.innerHTML = '<p class="text-sm text-gray-500 italic mt-2">Você ainda não possui salvamentos fixados.</p>';
         return;
       }
-
       codeHistory.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg';
-        
         const d = new Date(item.timestamp);
         const timeStr = d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
-        div.innerHTML = `
-          <div>
-            <span class="block text-sm font-bold text-gray-700 dark:text-gray-300">Versão Fixada ${codeHistory.length - index}</span>
-            <span class="block text-xs text-gray-500">${timeStr}</span>
-          </div>
-        `;
-        
+        div.innerHTML = `<div><span class="block text-sm font-bold text-gray-700 dark:text-gray-300">Versão Fixada ${codeHistory.length - index}</span><span class="block text-xs text-gray-500">${timeStr}</span></div>`;
         const btnRestore = document.createElement('button');
         btnRestore.className = 'text-xs font-bold border border-accent text-accent hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded transition-colors';
         btnRestore.innerText = 'Restaurar';
@@ -748,22 +680,16 @@ ORDER BY titulo ASC;`;
           if(confirm('Atenção: Restaurar vai apagar o código que você está escrevendo agora. Tem certeza?')) {
             currentCode.js = item.jsCode || currentCode.js;
             currentCode.sql = item.sqlCode || currentCode.sql;
-            DOM.editor.value = currentCode[selectedStudent.tab];
-            updateLineNumbers();
+            if(cmEditor) cmEditor.setValue(currentCode[selectedStudent.tab]);
             DOM.modalHistory.classList.add('hidden');
             triggerAutoSave();
           }
         };
-
         div.appendChild(btnRestore);
         DOM.historyList.appendChild(div);
       });
     }
-
-    DOM.btnHistory.addEventListener('click', () => {
-      renderHistory();
-      DOM.modalHistory.classList.remove('hidden');
-    });
+    DOM.btnHistory.addEventListener('click', () => { renderHistory(); DOM.modalHistory.classList.remove('hidden'); });
     DOM.btnCloseHistory.addEventListener('click', () => DOM.modalHistory.classList.add('hidden'));
 
     // ----------------------------------------------------
@@ -772,37 +698,30 @@ ORDER BY titulo ASC;`;
     if (auth) {
       const initAuth = async () => {
         try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-            await signInAnonymously(auth);
-          }
-        } catch (error) {
-          console.error("Erro na autenticação:", error);
-        }
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+          else await signInAnonymously(auth);
+        } catch (error) { console.error("Erro na autenticação:", error); }
       };
       initAuth();
       onAuthStateChanged(auth, (user) => { currentUser = user; });
     }
 
     // ----------------------------------------------------
-    // Entrar e Sair do Laboratório
+    // Entrar e Sair do Laboratório + Inicializar CodeMirror
     // ----------------------------------------------------
     DOM.btnEntrar.addEventListener('click', async () => {
       const nome = DOM.selNome.value;
       const turmaVal = DOM.selTurma.value;
       const senha = DOM.inputSenha.value;
       
-      // Validar Senha
       const alunoEncontrado = turmas[turmaVal].find(a => a.nome === nome);
       if (alunoEncontrado.dataNascimento !== senha) {
         DOM.errorSenha.classList.remove('hidden');
-        return; // Cancela o login
+        return; 
       }
       
       selectedStudent = {
-        id: gerarIdAluno(nome),
-        nome: nome,
+        id: gerarIdAluno(nome), nome: nome,
         turma: turmaVal === '1ipi' ? '1ª IPI' : '2ª IPI',
         tab: turmaVal === '1ipi' ? 'js' : 'sql'
       };
@@ -813,7 +732,7 @@ ORDER BY titulo ASC;`;
 
       if (db && currentUser) {
         try {
-          DOM.editor.value = "Carregando ambiente da nuvem...";
+          DOM.output.innerText = "Carregando ambiente da nuvem...";
           const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'projetos_ipi', selectedStudent.id);
           const docSnap = await getDoc(docRef);
           
@@ -821,30 +740,55 @@ ORDER BY titulo ASC;`;
             const data = docSnap.data();
             currentCode.js = data.jsCode || defaultJs;
             currentCode.sql = data.sqlCode || defaultSql;
+            currentFeedback = data.feedback || "";
             if (data.settings) currentSettings = { ...currentSettings, ...data.settings };
             if (data.history && Array.isArray(data.history)) codeHistory = data.history;
           } else {
-            currentCode.js = defaultJs;
-            currentCode.sql = defaultSql;
-            codeHistory = [];
+            currentCode.js = defaultJs; currentCode.sql = defaultSql;
+            currentFeedback = ""; codeHistory = [];
           }
-        } catch (error) {
-          console.error("Erro ao recuperar projeto:", error);
-        }
+        } catch (error) { console.error("Erro ao recuperar projeto:", error); }
       }
-
-      applySettings();
-      DOM.editor.value = currentCode[selectedStudent.tab];
-      updateLineNumbers();
-      
-      // Reseta botões de erro ao entrar
-      DOM.btnTranslateError.classList.add('hidden');
-      DOM.output.classList.remove('text-red-500');
-      DOM.output.innerText = selectedStudent.tab === 'js' ? 'A saída do seu código aparecerá aqui.' : 'Os resultados do banco de dados aparecerão aqui.';
 
       DOM.loginScreen.classList.add('hidden');
       DOM.appScreen.classList.remove('hidden');
       DOM.appScreen.classList.add('flex');
+      applySettings();
+
+      // INICIALIZAR CODEMIRROR APÓS A TELA FICAR VISÍVEL
+      if(!cmEditor) {
+        cmEditor = CodeMirror.fromTextArea(DOM.editor, {
+          lineNumbers: true,
+          mode: selectedStudent.tab === 'js' ? 'javascript' : 'text/x-sql',
+          theme: currentSettings.theme === 'dark' ? 'dracula' : 'default',
+          indentUnit: 2,
+          tabSize: 2
+        });
+
+        // Eventos do CodeMirror
+        cmEditor.on('change', () => {
+          currentCode[selectedStudent.tab] = cmEditor.getValue();
+          triggerAutoSave();
+        });
+
+        cmEditor.on('paste', (cm, e) => {
+          e.preventDefault();
+          window.alert("⚠️ Ação bloqueada: A função de COLAR código foi desativada. Pratique a digitação do código!");
+        });
+      } else {
+        cmEditor.setOption("mode", selectedStudent.tab === 'js' ? 'javascript' : 'text/x-sql');
+        cmEditor.setOption("theme", currentSettings.theme === 'dark' ? 'dracula' : 'default');
+      }
+      
+      cmEditor.setValue(currentCode[selectedStudent.tab]);
+      setTimeout(() => cmEditor.refresh(), 50);
+
+      DOM.feedbackEditor.value = currentFeedback;
+      
+      DOM.btnTranslateError.classList.add('hidden');
+      DOM.output.classList.remove('text-red-500');
+      DOM.output.innerText = selectedStudent.tab === 'js' ? 'A saída do seu código aparecerá aqui.' : 'Os resultados do banco de dados aparecerão aqui.';
+      setTab('terminal'); // Focar no terminal inicialmente
     });
 
     DOM.btnSair.addEventListener('click', () => {
@@ -859,22 +803,14 @@ ORDER BY titulo ASC;`;
     });
 
     // ----------------------------------------------------
-    // Autosave e Edição
+    // Autosave e Eventos de Edição
     // ----------------------------------------------------
     function setSaveStatus(status) {
       DOM.saveContainer.style.opacity = '1';
-      DOM.textSaving.classList.add('hidden');
-      DOM.textSaved.classList.add('hidden');
-      DOM.textError.classList.add('hidden');
-
-      if(status === 'saving') {
-        DOM.textSaving.classList.remove('hidden');
-      } else if (status === 'saved') {
-        DOM.textSaved.classList.remove('hidden');
-        setTimeout(() => DOM.saveContainer.style.opacity = '0', 3000);
-      } else if (status === 'error') {
-        DOM.textError.classList.remove('hidden');
-      }
+      DOM.textSaving.classList.add('hidden'); DOM.textSaved.classList.add('hidden'); DOM.textError.classList.add('hidden');
+      if(status === 'saving') DOM.textSaving.classList.remove('hidden');
+      else if (status === 'saved') { DOM.textSaved.classList.remove('hidden'); setTimeout(() => DOM.saveContainer.style.opacity = '0', 3000); }
+      else if (status === 'error') DOM.textError.classList.remove('hidden');
     }
 
     function triggerAutoSave() {
@@ -886,37 +822,26 @@ ORDER BY titulo ASC;`;
         try {
           const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'projetos_ipi', selectedStudent.id);
           await setDoc(docRef, {
-            jsCode: currentCode.js,
-            sqlCode: currentCode.sql,
-            settings: currentSettings,
-            history: codeHistory,
+            jsCode: currentCode.js, sqlCode: currentCode.sql,
+            feedback: DOM.feedbackEditor.value,
+            settings: currentSettings, history: codeHistory,
             updatedAt: new Date().toISOString(),
-            nomeAluno: selectedStudent.nome,
-            turmaAluno: selectedStudent.turma
+            nomeAluno: selectedStudent.nome, turmaAluno: selectedStudent.turma
           }, { merge: true });
           setSaveStatus('saved');
         } catch (error) {
-          console.error("Erro no auto-save:", error);
-          DOM.textError.title = error.message; // Mostra a mensagem real ao passar o rato
+          DOM.textError.title = error.message; 
           setSaveStatus('error');
         }
       }, 1500);
     }
 
-    DOM.editor.addEventListener('input', () => {
-      currentCode[selectedStudent.tab] = DOM.editor.value;
-      updateLineNumbers();
-      triggerAutoSave();
-    });
+    DOM.feedbackEditor.addEventListener('input', triggerAutoSave);
 
     DOM.btnManualSave.addEventListener('click', () => {
       if (!selectedStudent) return;
-      codeHistory.unshift({
-        timestamp: new Date().toISOString(),
-        jsCode: currentCode.js,
-        sqlCode: currentCode.sql
-      });
-      if (codeHistory.length > 15) codeHistory.pop(); // Mantém apenas 15 versões
+      codeHistory.unshift({ timestamp: new Date().toISOString(), jsCode: currentCode.js, sqlCode: currentCode.sql });
+      if (codeHistory.length > 15) codeHistory.pop(); 
       triggerAutoSave();
       
       const originalText = DOM.btnManualSave.innerHTML;
@@ -924,40 +849,22 @@ ORDER BY titulo ASC;`;
       setTimeout(() => DOM.btnManualSave.innerHTML = originalText, 2000);
     });
 
-    DOM.editor.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const start = DOM.editor.selectionStart;
-        const end = DOM.editor.selectionEnd;
-        const val = DOM.editor.value;
-        DOM.editor.value = val.substring(0, start) + "  " + val.substring(end);
-        currentCode[selectedStudent.tab] = DOM.editor.value;
-        DOM.editor.selectionStart = DOM.editor.selectionEnd = start + 2;
-        updateLineNumbers();
-      }
-    });
-
     // ----------------------------------------------------
     // Inicialização do Motor SQL.js
     // ----------------------------------------------------
     window.onload = async () => {
       try {
-        const SQL = await window.initSqlJs({
-          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-        });
-        dbSQLEngine = SQL;
-        isSQLReady = true;
-      } catch(e) {
-        console.error("Falha ao carregar SQL.js", e);
-      }
+        const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
+        dbSQLEngine = SQL; isSQLReady = true;
+      } catch(e) { console.error("Falha ao carregar SQL.js", e); }
     };
 
     // ----------------------------------------------------
-    // Motores de Execução (JS e SQL)
+    // Motores de Execução com Compilador Profissional (JS e SQL)
     // ----------------------------------------------------
     async function executeJS() {
       let logs = [];
-      const code = DOM.editor.value;
+      const code = cmEditor.getValue();
       
       const originalConsoleLog = console.log;
       const originalConsoleError = console.error;
@@ -969,64 +876,65 @@ ORDER BY titulo ASC;`;
       console.table = (data) => logs.push(JSON.stringify(data, null, 2));
       window.alert = (msg) => logs.push(`[ALERTA INTERCEPTADO]: ${msg}`);
 
+      setTab('terminal'); // Volta pra aba do terminal
       DOM.output.innerText = 'Executando...';
       DOM.output.classList.remove('text-red-500');
-      DOM.btnTranslateError.classList.add('hidden'); // Oculta botão de erro antes de testar
+      DOM.btnTranslateError.classList.add('hidden');
 
       try {
         const AsyncFunction = async function () {}.constructor;
         const func = new AsyncFunction(code);
         await func();
-        
         DOM.output.innerText = logs.join('\n') || '[Processo concluído sem saídas no console]';
       } catch (error) {
-        // Capturar a linha do erro no JS
-        let lineInfo = "";
+        let line = "?";
         if (error.stack) {
           const match = error.stack.match(/<anonymous>:(\d+):\d+/);
-          if (match) {
-            const linha = Math.max(1, parseInt(match[1]) - 2); 
-            lineInfo = `\n⚠️ Dica: Verifique a Linha ${linha}.`;
-          }
+          if (match) line = Math.max(1, parseInt(match[1]) - 2); 
         }
 
-        const rawErrorText = logs.join('\n') + `\n\n[ERRO DE EXECUÇÃO]: ${error.message}${lineInfo}`;
-        const translatedErrorText = logs.join('\n') + `\n\n[TRADUÇÃO DO ERRO]: ${translateErrorMsg(error.message)}${lineInfo}`;
+        let rawErrorText = `❌ ERRO DE COMPILAÇÃO / EXECUÇÃO\n`;
+        rawErrorText += `----------------------------------------\n`;
+        rawErrorText += `📍 Arquivo: script.js\n`;
+        if(line !== "?") rawErrorText += `📍 Linha: ${line}\n`;
+        rawErrorText += `----------------------------------------\n`;
+        
+        // As saídas anteriores caso tenha tido console.log antes do erro
+        const saidas = logs.length > 0 ? `\n[Saídas antes do erro]:\n${logs.join('\n')}\n` : '';
 
-        // Salvar estado do erro e habilitar botão de tradução
-        currentErrorData = {
-          raw: rawErrorText,
-          translated: translatedErrorText,
-          isTranslated: false
-        };
+        const translatedErrorText = rawErrorText + `Detalhes: ${translateErrorMsg(error.message)}\n` + saidas;
+        rawErrorText += `Detalhes: ${error.message}\n` + saidas;
 
+        currentErrorData = { raw: rawErrorText, translated: translatedErrorText, isTranslated: false };
         DOM.output.classList.add('text-red-500');
-        DOM.output.innerText = currentErrorData.raw; // Mostra erro em inglês primeiro
+        DOM.output.innerText = currentErrorData.raw;
         
         DOM.btnTranslateError.classList.remove('hidden');
         DOM.labelTranslateError.innerText = "Traduzir Erro";
-
       } finally {
-        console.log = originalConsoleLog;
-        console.error = originalConsoleError;
-        console.table = originalConsoleTable;
-        window.alert = originalAlert;
+        console.log = originalConsoleLog; console.error = originalConsoleError; console.table = originalConsoleTable; window.alert = originalAlert;
       }
     }
 
     function executeSQL() {
-      const code = DOM.editor.value;
+      const code = cmEditor.getValue();
       if (!isSQLReady || !dbSQLEngine) {
         DOM.output.innerText = 'Carregando motor SQL, aguarde um momento...';
         return;
       }
 
+      setTab('terminal'); // Volta pra aba terminal
       DOM.output.innerText = 'Consultando banco de dados...';
       DOM.output.classList.remove('text-red-500');
       DOM.btnTranslateError.classList.add('hidden');
 
       try {
         const database = new dbSQLEngine.Database();
+        const initSql = `
+          CREATE TABLE alunos (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL);
+          INSERT INTO alunos (nome) VALUES ${alunos2IPI.map(n => `('${n.nome}')`).join(',\n')};
+        `;
+        database.exec(initSql);
 
         const results = database.exec(code);
         
@@ -1044,17 +952,28 @@ ORDER BY titulo ASC;`;
         }
         database.close();
       } catch (error) {
-        const rawErrorText = `[ERRO SQL]: ${error.message}`;
-        const translatedErrorText = `[TRADUÇÃO DO ERRO]: ${translateErrorMsg(error.message)}`;
+        let line = "?";
+        let match = error.message.match(/near "([^"]+)"/);
+        if (match) {
+            let token = match[1];
+            let linesArray = code.split('\n');
+            for(let i=0; i<linesArray.length; i++) {
+                if(linesArray[i].includes(token)) { line = i+1; break; }
+            }
+        }
 
-        currentErrorData = {
-          raw: rawErrorText,
-          translated: translatedErrorText,
-          isTranslated: false
-        };
+        let rawErrorText = `❌ ERRO DE COMPILAÇÃO SQL\n`;
+        rawErrorText += `----------------------------------------\n`;
+        rawErrorText += `📍 Arquivo: query.sql\n`;
+        if(line !== "?") rawErrorText += `📍 Linha (aprox.): ${line}\n`;
+        rawErrorText += `----------------------------------------\n`;
 
+        const translatedErrorText = rawErrorText + `Detalhes: ${translateErrorMsg(error.message)}`;
+        rawErrorText += `Detalhes: ${error.message}`;
+
+        currentErrorData = { raw: rawErrorText, translated: translatedErrorText, isTranslated: false };
         DOM.output.classList.add('text-red-500');
-        DOM.output.innerText = currentErrorData.raw; // Mostra erro em inglês primeiro
+        DOM.output.innerText = currentErrorData.raw;
         
         DOM.btnTranslateError.classList.remove('hidden');
         DOM.labelTranslateError.innerText = "Traduzir Erro";
@@ -1062,7 +981,7 @@ ORDER BY titulo ASC;`;
     }
 
     DOM.btnExecutar.addEventListener('click', () => {
-      if (!selectedStudent) return;
+      if (!selectedStudent || !cmEditor) return;
       if (selectedStudent.tab === 'js') executeJS();
       else executeSQL();
     });
