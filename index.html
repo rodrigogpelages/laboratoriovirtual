@@ -235,8 +235,20 @@
         </div>
         
         <!-- Conteúdo do Terminal -->
-        <div id="panel-terminal" class="flex-1 p-4 overflow-y-auto block">
-          <pre id="output" class="font-mono text-sm whitespace-pre-wrap text-accent dark:text-gray-300 transition-colors">A saída aparecerá aqui.</pre>
+        <div id="panel-terminal" class="flex-1 flex flex-col overflow-hidden block">
+          <!-- Parte Superior: Saída dos Comandos -->
+          <div class="flex-1 p-4 overflow-y-auto">
+            <pre id="output" class="font-mono text-sm whitespace-pre-wrap text-accent dark:text-gray-300 transition-colors">A saída aparecerá aqui.</pre>
+          </div>
+          
+          <!-- Parte Inferior: Inspetor de Tabelas SQL (Visível apenas na aba SQL) -->
+          <div id="panel-sql-tables" class="hidden flex-1 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a] p-4 overflow-y-auto transition-colors">
+            <h3 class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 flex items-center">
+              <svg class="w-4 h-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" /></svg>
+              Tabelas do Banco de Dados
+            </h3>
+            <pre id="sql-tables-output" class="font-mono text-sm whitespace-pre-wrap text-indigo-600 dark:text-indigo-400 transition-colors">Execute o código para visualizar as tabelas sendo criadas.</pre>
+          </div>
         </div>
 
         <!-- Conteúdo do Feedback -->
@@ -490,9 +502,11 @@ ORDER BY titulo ASC;`;
       labelNomeAluno: document.getElementById('label-nome-aluno'), labelFilename: document.getElementById('label-filename'),
       
       editorWrapper: document.getElementById('editor-wrapper'), editor: document.getElementById('editor'),
+      lineNumbers: document.getElementById('line-numbers'),
       
       tabTerminal: document.getElementById('tab-btn-terminal'), tabFeedback: document.getElementById('tab-btn-feedback'),
       panelTerminal: document.getElementById('panel-terminal'), panelFeedback: document.getElementById('panel-feedback'),
+      panelSqlTables: document.getElementById('panel-sql-tables'), sqlTablesOutput: document.getElementById('sql-tables-output'),
       feedbackEditor: document.getElementById('feedback-editor'),
 
       output: document.getElementById('output'), btnExecutar: document.getElementById('btn-executar'),
@@ -624,11 +638,14 @@ ORDER BY titulo ASC;`;
     // Lógica do Tema, Cores e Configurações (com CodeMirror)
     // ----------------------------------------------------
     function applySettings() {
+      // Aplicar Tema Claro/Escuro
       if (currentSettings.theme === 'dark') DOM.html.classList.add('dark');
       else DOM.html.classList.remove('dark');
 
+      // Aplicar Tamanho da Fonte no contêiner pai para herança perfeita
       DOM.editorWrapper.style.fontSize = currentSettings.fontSize;
       DOM.output.style.fontSize = currentSettings.fontSize;
+      DOM.sqlTablesOutput.style.fontSize = currentSettings.fontSize;
       DOM.feedbackEditor.style.fontSize = currentSettings.fontSize;
       DOM.selectFontSize.value = currentSettings.fontSize;
 
@@ -759,6 +776,13 @@ ORDER BY titulo ASC;`;
       DOM.appScreen.classList.remove('hidden');
       DOM.appScreen.classList.add('flex');
       applySettings();
+      
+      // Controlar a visibilidade da aba extra de tabelas do SQL
+      if (selectedStudent.tab === 'sql') {
+        DOM.panelSqlTables.classList.remove('hidden');
+      } else {
+        DOM.panelSqlTables.classList.add('hidden');
+      }
 
       // INICIALIZAR CODEMIRROR APÓS A TELA FICAR VISÍVEL
       if(!cmEditor) {
@@ -942,6 +966,7 @@ ORDER BY titulo ASC;`;
         
         DOM.btnTranslateError.classList.remove('hidden');
         DOM.labelTranslateError.innerText = "Traduzir Erro";
+
       } finally {
         console.log = originalConsoleLog; console.error = originalConsoleError; console.table = originalConsoleTable; window.alert = originalAlert;
       }
@@ -962,25 +987,56 @@ ORDER BY titulo ASC;`;
       try {
         const database = new dbSQLEngine.Database();
         const initSql = `
-          CREATE TABLE alunos (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL);
-          INSERT INTO alunos (nome) VALUES ${alunos2IPI.map(n => `('${n.nome}')`).join(',\n')};
+          CREATE TABLE jogos (id INTEGER PRIMARY KEY AUTOINCREMENT, titulo TEXT NOT NULL, ano_lancamento INTEGER);
+          INSERT INTO jogos (titulo, ano_lancamento) VALUES ('Minecraft', 2011), ('FIFA 23', 2022), ('Roblox', 2006), ('Valorant', 2020);
         `;
         database.exec(initSql);
 
         const results = database.exec(code);
         
+        let finalOutput = '';
+
+        // 1. Mostra a mensagem de sucesso e a saída (SELECT) na parte de Cima
         if (results.length === 0) {
-          DOM.output.innerText = 'Comando executado com sucesso.\n(Nenhum resultado retornado para visualização)';
+          finalOutput += '▶ Comando(s) executado(s) com sucesso.\n';
         } else {
-          let outputString = '';
+          finalOutput += '▶ RESULTADOS (SELECT):\n';
           results.forEach((resultSet, idx) => {
-            if (idx > 0) outputString += '\n\n';
+            if (idx > 0) finalOutput += '\n\n';
             const colString = resultSet.columns.join('  |  ');
-            outputString += colString + '\n' + '-'.repeat(colString.length + 5) + '\n';
-            resultSet.values.forEach(row => outputString += row.join('  |  ') + '\n');
+            finalOutput += colString + '\n' + '-'.repeat(colString.length + 5) + '\n';
+            resultSet.values.forEach(row => finalOutput += row.join('  |  ') + '\n');
           });
-          DOM.output.innerText = outputString;
         }
+        
+        // 2. Extrai e desenha todas as tabelas na parte de Baixo
+        let tablesOutput = '';
+        const tablesQuery = database.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';");
+        
+        if (tablesQuery.length > 0 && tablesQuery[0].values.length > 0) {
+          tablesQuery[0].values.forEach(row => {
+            const tableName = row[0];
+            tablesOutput += `📁 TABELA: [ ${tableName} ]\n`;
+            try {
+              const tableData = database.exec(`SELECT * FROM "${tableName}" LIMIT 20;`); 
+              if (tableData.length > 0) {
+                const cols = tableData[0].columns.join('  |  ');
+                tablesOutput += cols + '\n' + '-'.repeat(cols.length + 5) + '\n';
+                tableData[0].values.forEach(r => tablesOutput += r.join('  |  ') + '\n');
+              } else {
+                tablesOutput += '(Tabela vazia)\n';
+              }
+            } catch(e) {
+               tablesOutput += '(Erro ao ler estrutura da tabela)\n';
+            }
+            tablesOutput += '\n';
+          });
+        } else {
+          tablesOutput += 'Nenhuma tabela encontrada no banco de dados.\n';
+        }
+
+        DOM.output.innerText = finalOutput;
+        DOM.sqlTablesOutput.innerText = tablesOutput;
         database.close();
       } catch (error) {
         let line = "?";
